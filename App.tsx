@@ -156,7 +156,7 @@ const App: React.FC = () => {
              <i className="fa-solid fa-bolt-lightning text-white text-xl"></i>
           </div>
           <div>
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-neutral-50 tracking-tighter leading-none">FocusFlow</h1>
+            <h1 className="text-3xl font-black text-neutral-900 dark:text-neutral-50 tracking-tighter leading-none">0 Focus</h1>
             <p className="text-[10px] uppercase font-black tracking-[0.3em] text-neutral-400 dark:text-neutral-500 mt-1">Time Master</p>
           </div>
         </div>
