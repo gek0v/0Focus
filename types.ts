@@ -1,4 +1,3 @@
-
 export type SegmentType = 'work' | 'break';
 
 export interface TimeSegment {
@@ -13,4 +12,5 @@ export interface ScheduleConfig {
   targetEndTime: string;
   breakCount: number;
   breakDuration: number;
+  pomodoroMode?: boolean;
 }

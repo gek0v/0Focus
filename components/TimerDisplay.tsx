@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { TimeSegment } from '../types';
 
@@ -7,8 +6,8 @@ interface TimerDisplayProps {
   onSegmentEnd: () => void;
   onReset: () => void;
   onSkip: (remainingSeconds: number) => void;
-  isLastSegment: boolean;
-  themeColor: string;
+  schedule: TimeSegment[];
+  currentIndex: number;
 }
 
 const TimerDisplay: React.FC<TimerDisplayProps> = ({ 
@@ -16,8 +15,8 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
   onSegmentEnd, 
   onReset, 
   onSkip,
-  isLastSegment,
-  themeColor
+  schedule,
+  currentIndex
 }) => {
   const [timeLeft, setTimeLeft] = useState(0);
   const totalDurationSeconds = (currentSegment.endTime.getTime() - currentSegment.startTime.getTime()) / 1000;
@@ -46,111 +45,145 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
   const seconds = timeLeft % 60;
   const isWork = currentSegment.type === 'work';
 
-  const progress = 1 - (timeLeft / totalDurationSeconds);
-  const numDots = 60; 
-
-  const getThemeGradient = () => {
-    if (!isWork) return 'from-emerald-500 to-emerald-600';
-    switch (themeColor) {
-      case 'rose': return 'from-rose-500 to-rose-600';
-      case 'amber': return 'from-amber-500 to-amber-600';
-      case 'blue': return 'from-blue-500 to-blue-600';
-      case 'emerald': return 'from-emerald-500 to-emerald-600';
-      default: return 'from-indigo-600 to-indigo-700';
-    }
-  };
-
-  const getDotTextColor = () => {
-    if (!isWork) return 'text-emerald-500';
-    switch (themeColor) {
-      case 'rose': return 'text-rose-500';
-      case 'amber': return 'text-amber-500';
-      case 'blue': return 'text-blue-500';
-      case 'emerald': return 'text-emerald-500';
-      default: return 'text-indigo-500';
-    }
-  };
+  // Linear progress calculation
+  const progressPercentage = Math.max(0, Math.min(100, ((totalDurationSeconds - timeLeft) / totalDurationSeconds) * 100));
+  
+  // Break calculation
+  const allBreaks = schedule.filter(s => s.type === 'break');
+  const breaksUntilNow = schedule.slice(0, currentIndex + 1).filter(s => s.type === 'break').length;
+  // If current segment is a break, it is the "current" one (index breaksUntilNow - 1)
+  // If current segment is work, the next break is the "pending" one (index breaksUntilNow)
 
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-xl mx-auto space-y-12 animate-in fade-in zoom-in duration-700">
-      <div className="relative w-full aspect-square flex items-center justify-center">
-        {/* Neutral background ring */}
-        <div className="absolute w-[92%] h-[92%] rounded-full border border-neutral-200/50 dark:border-neutral-800/50"></div>
-        
-        {/* Dynamic progress dots */}
-        <div className="absolute inset-0 pointer-events-none">
-          {Array.from({ length: numDots }).map((_, i) => {
-            const angle = (i * (360 / numDots)) - 90;
-            const radian = (angle * Math.PI) / 180;
-            const radius = 46; 
-            const x = 50 + radius * Math.cos(radian);
-            const y = 50 + radius * Math.sin(radian);
-            const isActive = (i / numDots) <= progress;
-            const dotColorClass = getDotTextColor();
-            
-            return (
-              <div 
-                key={i}
-                className={`absolute w-1.5 h-1.5 rounded-full transition-all duration-700 ${
-                  isActive 
-                    ? `bg-current scale-150 dot-glow ${dotColorClass}` 
-                    : 'bg-neutral-200 dark:bg-neutral-800/50 scale-100'
-                }`}
-                style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
-              />
-            );
-          })}
-        </div>
-
-        {/* Core timer */}
-        <div className={`relative w-[78%] aspect-square rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.3)] flex flex-col items-center justify-center transition-all duration-1000 z-10 overflow-hidden bg-gradient-to-br text-white ${getThemeGradient()}`}>
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
-          
-          <span className="text-sm font-bold uppercase tracking-[0.4em] opacity-80 mb-3 drop-shadow-sm flex items-center gap-3">
-            <i className={`fa-solid ${isWork ? 'fa-brain' : 'fa-mug-hot'}`}></i>
-            {isWork ? 'Focus' : 'Break'}
-          </span>
-          <div className="text-7xl md:text-8xl font-black tabular-nums tracking-tighter drop-shadow-2xl">
-            {String(minutes).padStart(2, '0')}<span className="opacity-30 animate-pulse">:</span>{String(seconds).padStart(2, '0')}
-          </div>
-          <div className="mt-8 flex flex-col items-center bg-black/10 px-6 py-2 rounded-2xl backdrop-blur-sm">
-            <p className="text-[9px] uppercase font-black tracking-widest opacity-60 mb-0.5">Next target</p>
-            <p className="text-lg font-black flex items-center gap-2">
-              <i className="fa-regular fa-clock text-xs"></i>
-              {currentSegment.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full px-4">
-        <button 
-          onClick={() => onSkip(timeLeft)}
-          disabled={isLastSegment}
-          className="group relative overflow-hidden px-8 py-6 rounded-3xl font-black transition-all shadow-xl active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800"
-        >
-          <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-current ${getDotTextColor()}`}></div>
-          <span className={`relative flex items-center justify-center gap-3 ${getDotTextColor()}`}>
-             <i className="fa-solid fa-forward-step text-lg"></i>
-             {isWork ? 'Skip to Break' : 'End Break'}
-          </span>
-        </button>
-        
-        <button 
-          onClick={onReset}
-          className="px-8 py-6 rounded-3xl bg-neutral-900 dark:bg-neutral-50 text-white dark:text-neutral-950 font-black hover:opacity-90 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
-        >
-          <i className="fa-solid fa-power-off text-sm"></i>
-          <span>Stop</span>
-        </button>
-      </div>
+    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-4xl mx-auto px-6 pb-32 relative animate-in fade-in zoom-in duration-500">
       
-      {isLastSegment && (
-        <div className="glass px-10 py-4 rounded-[2rem] animate-pulse shadow-2xl flex items-center gap-4">
-          <div className={`w-3 h-3 rounded-full ${getDotTextColor()} bg-current dot-glow`}></div>
-          <p className="text-xs text-neutral-700 dark:text-neutral-300 font-black uppercase tracking-widest">
-            Final session segment
-          </p>
+      {/* Ambient Glow */}
+      <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      {/* Breathing Background Layer */}
+      <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-[450px] h-[450px] md:w-[750px] md:h-[750px]">
+        <div className="w-full h-full animate-breathe relative">
+          
+          {/* Main Blur Circle */}
+          <div className="absolute inset-0 rounded-full bg-slate-200/20 dark:bg-black/15 blur-3xl"></div>
+          
+          {/* Satellite Circles */}
+          {Array.from({ length: 12 }).map((_, i) => (
+             <div 
+               key={i} 
+               className="absolute inset-0"
+               style={{ transform: `rotate(${i * 30}deg)` }}
+             >
+               <div 
+                 className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 md:w-3 md:h-3 rounded-full bg-slate-300/30 dark:bg-slate-700/30 animate-pulse-slow"
+                 style={{ animationDelay: `${i * 0.5}s` }}
+               ></div>
+             </div>
+           ))}
+        </div>
+      </div>
+
+      {/* Status Badge */}
+      <div className="flex flex-col items-center mb-8 gap-3 relative z-10">
+        <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border ${isWork ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
+          <span className="relative flex h-2.5 w-2.5">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isWork ? 'bg-primary' : 'bg-orange-500'}`}></span>
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isWork ? 'bg-primary' : 'bg-orange-500'}`}></span>
+          </span>
+          <span className="text-xs font-bold uppercase tracking-wider">{isWork ? 'Focus Session' : 'Break Time'}</span>
+        </div>
+        <p className="text-slate-500 dark:text-white/60 text-sm font-medium">
+          {isWork ? 'Stay focused on your task' : 'Take a deep breath and relax'}
+        </p>
+      </div>
+
+      {/* Timer Display */}
+      <div className="relative z-10 mb-12">
+        <div className="flex items-baseline justify-center text-slate-900 dark:text-white">
+          <span className="text-[120px] md:text-[180px] font-black leading-none select-none tracking-tighter tabular-nums text-slate-900 dark:text-white drop-shadow-[0_0_40px_rgba(var(--color-primary)/0.1)]">
+            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Section */}
+      <div className="w-full max-w-lg flex flex-col gap-8 relative z-10">
+        {/* Linear Progress Bar */}
+        <div className="flex flex-col gap-2">
+          <div className="relative w-full h-3 bg-slate-200 dark:bg-[#1c2e24] rounded-full overflow-hidden shadow-inner">
+            <div 
+              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(var(--color-primary)/0.5)] ${isWork ? 'bg-primary' : 'bg-orange-500'}`} 
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className={`font-bold ${isWork ? 'text-primary' : 'text-orange-500'}`}>{Math.round(progressPercentage)}% completed</span>
+            <span className="text-slate-400 dark:text-white/40 font-medium">
+              Ends at {currentSegment.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+            </span>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center justify-center gap-6">
+          <button 
+            onClick={onReset}
+            className="group flex items-center justify-center size-16 rounded-full bg-white dark:bg-[#1c2e24] text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-all hover:scale-105 active:scale-95 shadow-lg" 
+            title="Stop Session"
+          >
+            <span className="material-symbols-outlined text-[32px] group-hover:text-red-500 transition-colors">stop</span>
+          </button>
+          
+          <button 
+            onClick={() => onSkip(timeLeft)}
+            className="group flex items-center justify-center size-16 rounded-full bg-white dark:bg-[#1c2e24] text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-all hover:scale-105 active:scale-95 shadow-lg" 
+            title="Skip Segment"
+          >
+            <span className="material-symbols-outlined text-[32px] group-hover:text-primary transition-colors">skip_next</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Break Indicators (Footer Area) */}
+      {allBreaks.length > 0 && (
+        <div className="absolute bottom-10 left-0 w-full flex justify-center">
+          <div className="bg-white/50 dark:bg-[#1c2e24]/60 backdrop-blur-md px-6 py-3 rounded-xl flex items-center gap-4 border border-slate-200 dark:border-white/5">
+            <span className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-wide">Breaks</span>
+            <div className="flex items-center gap-2">
+              {allBreaks.map((_, index) => {
+                let status = 'pending';
+                const totalBreaks = allBreaks.length;
+                
+                // Calculate which break index (0-based) is currently active or just finished relative to time
+                const isCurrentSegmentBreak = currentSegment.type === 'break';
+                const breaksPassed = isCurrentSegmentBreak ? breaksUntilNow - 1 : breaksUntilNow;
+                
+                // We want to fill/consume from Right to Left.
+                // The active break visual index is the one we are currently on, counting from the right.
+                const activeVisualIndex = totalBreaks - 1 - breaksPassed;
+                
+                if (index > activeVisualIndex) {
+                  status = 'completed';
+                } else if (index === activeVisualIndex && isCurrentSegmentBreak) {
+                  status = 'current';
+                } else {
+                  status = 'pending';
+                }
+                
+                return (
+                  <div 
+                    key={index}
+                    className={`size-3 rounded-full transition-all ${
+                      status === 'completed' ? 'bg-slate-300 dark:bg-white/10' : 
+                      status === 'current' ? 'border-2 border-primary bg-transparent scale-125' : 
+                      'bg-primary'
+                    }`} 
+                    title={status === 'completed' ? 'Spent' : status === 'current' ? 'Current' : 'Remaining'}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

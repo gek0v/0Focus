@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Default Focus Green: #38e07b -> 56 224 123 */
+    --color-primary: 56 224 123;
+  }
+
+  .theme-break {
+    /* Break Blue: #60a5fa (blue-400) -> 96 165 250 */
+    --color-primary: 96 165 250;
+  }
+
+  body {
+    @apply font-display antialiased;
+  }
+}
+
+/* Hide spin buttons for number inputs */
+@layer utilities {
+  .appearance-none::-webkit-outer-spin-button,
+  .appearance-none::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  .appearance-none {
+    -moz-appearance: textfield;
+  }
+}

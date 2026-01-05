@@ -1,21 +1,67 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { TimeSegment, ScheduleConfig } from './types';
+import { TimeSegment } from './types';
 import { calculateSchedule } from './services/scheduleEngine';
 import TimerDisplay from './components/TimerDisplay';
-
-type ThemeColor = 'indigo' | 'rose' | 'amber' | 'emerald' | 'blue';
+import Header from './components/Header';
+import SettingsModal from './components/SettingsModal';
+import Footer from './components/Footer';
 
 const App: React.FC = () => {
-  const [endTime, setEndTime] = useState('21:00');
+  // Get current time rounded to next 5 minutes for default start
+  const getDefaultTime = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + 60); // Default 1 hour from now
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const [endTime, setEndTime] = useState(getDefaultTime());
   const [breakCount, setBreakCount] = useState(2);
-  const [breakDuration, setBreakDuration] = useState(30);
+  const [breakDuration, setBreakDuration] = useState(15);
   const [schedule, setSchedule] = useState<TimeSegment[]>([]);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [themeColor, setThemeColor] = useState<ThemeColor>('indigo');
+  
+  // Theme State
+  const [baseTheme, setBaseTheme] = useState<'light' | 'dark' | 'custom'>('dark');
+  const [accentColor, setAccentColor] = useState<string>('#38e07b');
+  const [breakColor, setBreakColor] = useState<string>('#60a5fa');
+  const [customBackgroundColor, setCustomBackgroundColor] = useState<string>('#122017');
+  const [customSurfaceColor, setCustomSurfaceColor] = useState<string>('#29382f');
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  
+  // Sound State
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [volume, setVolume] = useState(70);
+  
+  const [isPomodoro, setIsPomodoro] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Derived state for display
+  const [hours, setHours] = useState(endTime.split(':')[0]);
+  const [minutes, setMinutes] = useState(endTime.split(':')[1]);
+
+  // Determine current mode
+  const currentSegment = activeIdx !== null ? schedule[activeIdx] : null;
+  const isBreak = currentSegment?.type === 'break';
+
+  useEffect(() => {
+    const [h, m] = endTime.split(':');
+    setHours(h);
+    setMinutes(m);
+  }, [endTime]);
+
+  // Sync Base Theme with Dark Mode
+  useEffect(() => {
+    if (baseTheme === 'light') {
+      setIsDarkMode(false);
+    } else {
+      // Dark and Custom default to dark mode base styles for now
+      setIsDarkMode(true);
+    }
+  }, [baseTheme]);
+
+  // Apply Dark Mode Class
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -24,13 +70,77 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Helper to determine the effective break color based on theme
+  const getEffectiveBreakColor = useCallback(() => {
+    if (baseTheme === 'light') return '#60a5fa'; // Blue-400
+    if (baseTheme === 'dark') return '#1e3a8a';  // Blue-900
+    return breakColor; // Custom user selection
+  }, [baseTheme, breakColor]);
+
+  // Apply Primary Color to CSS Variable (Dynamic based on mode)
+  useEffect(() => {
+    const targetColor = isBreak ? getEffectiveBreakColor() : accentColor;
+    
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? 
+        `${parseInt(result[1], 16)} ${parseInt(result[2], 16)} ${parseInt(result[3], 16)}` : 
+        '56 224 123'; // Default fallback
+    };
+    
+    document.documentElement.style.setProperty('--color-primary', hexToRgb(targetColor));
+  }, [accentColor, breakColor, isBreak, getEffectiveBreakColor]);
+
+  // Handle Pomodoro Mode Toggle
+  useEffect(() => {
+    if (isPomodoro) {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      if (target < now) target.setDate(target.getDate() + 1);
+      
+      const totalMinutes = Math.floor((target.getTime() - now.getTime()) / 60000);
+      const cycleLength = 25 + 5; 
+      const cycles = Math.floor(totalMinutes / cycleLength);
+      
+      setBreakDuration(5);
+      setBreakCount(Math.max(0, cycles - 1));
+    }
+  }, [isPomodoro, hours, minutes]);
+
+  const updateTime = (addMinutes: number) => {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    if (target < now) target.setDate(target.getDate() + 1);
+    
+    target.setMinutes(target.getMinutes() + addMinutes);
+    
+    const h = String(target.getHours()).padStart(2, '0');
+    const m = String(target.getMinutes()).padStart(2, '0');
+    setEndTime(`${h}:${m}`);
+  };
+
+  const setTimeSpecific = (type: 'hour' | 'minute', val: number) => {
+    let h = parseInt(hours);
+    let m = parseInt(minutes);
+
+    if (type === 'hour') h = val % 24;
+    if (type === 'minute') m = val % 60;
+
+    const hStr = String(h).padStart(2, '0');
+    const mStr = String(m).padStart(2, '0');
+    setEndTime(`${hStr}:${mStr}`);
+  }
+
   const handleGenerate = () => {
     try {
       setError(null);
       const newSchedule = calculateSchedule({
         targetEndTime: endTime,
         breakCount,
-        breakDuration
+        breakDuration,
+        pomodoroMode: isPomodoro
       });
       setSchedule(newSchedule);
       setActiveIdx(0);
@@ -38,35 +148,6 @@ const App: React.FC = () => {
       setError(err.message.includes("No space") 
         ? "Insufficient time! Adjust breaks or the end time." 
         : err.message);
-    }
-  };
-
-  const handlePomodoro = () => {
-    try {
-      setError(null);
-      const now = new Date();
-      const [hours, minutes] = endTime.split(':').map(Number);
-      const target = new Date();
-      target.setHours(hours, minutes, 0, 0);
-      if (target < now) target.setDate(target.getDate() + 1);
-
-      const totalMins = Math.floor((target.getTime() - now.getTime()) / 60000);
-      const numBreaks = Math.floor(totalMins / 30);
-      
-      if (numBreaks < 1) throw new Error("Insufficient time for Pomodoro.");
-
-      setBreakDuration(5);
-      setBreakCount(numBreaks - 1);
-      
-      const newSchedule = calculateSchedule({
-        targetEndTime: endTime,
-        breakCount: numBreaks - 1,
-        breakDuration: 5
-      });
-      setSchedule(newSchedule);
-      setActiveIdx(0);
-    } catch (err: any) {
-      setError(err.message);
     }
   };
 
@@ -117,186 +198,294 @@ const App: React.FC = () => {
     setActiveIdx(null);
   };
 
-  const currentSegment = activeIdx !== null ? schedule[activeIdx] : null;
   const isLastSegment = activeIdx !== null && activeIdx === schedule.length - 1;
 
-  const getBlobColor = () => {
-    if (isDarkMode) return 'bg-neutral-800/20'; // Neutral dark mode
-    switch(themeColor) {
-      case 'rose': return 'bg-rose-200/30';
-      case 'amber': return 'bg-amber-200/30';
-      case 'blue': return 'bg-blue-200/30';
-      case 'emerald': return 'bg-emerald-200/30';
-      default: return 'bg-indigo-200/30';
-    }
-  };
+  // Summary Calculations
+  const now = new Date();
+  const target = new Date();
+  target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+  if (target < now) target.setDate(target.getDate() + 1);
+  
+  const totalDurationMinutes = Math.max(0, Math.floor((target.getTime() - now.getTime()) / 60000));
+  const totalHours = Math.floor(totalDurationMinutes / 60);
+  const totalMinsRem = totalDurationMinutes % 60;
+  
+  const totalBreakMinutes = breakCount * breakDuration;
+  const focusMinutes = Math.max(0, totalDurationMinutes - totalBreakMinutes);
+  const focusH = Math.floor(focusMinutes / 60);
+  const focusM = focusMinutes % 60;
 
-  const getThemeBg = () => {
-    switch(themeColor) {
-      case 'rose': return 'bg-rose-500';
-      case 'amber': return 'bg-amber-500';
-      case 'blue': return 'bg-blue-500';
-      case 'emerald': return 'bg-emerald-500';
-      default: return 'bg-indigo-600';
-    }
-  };
+  // Custom Surface Style helper
+  const customSurfaceStyle = baseTheme === 'custom' ? { backgroundColor: customSurfaceColor } : undefined;
+
+  // Determine Background Color
+  let appBackgroundColor: string | undefined = undefined;
+  if (isBreak) {
+    appBackgroundColor = getEffectiveBreakColor();
+  } else if (baseTheme === 'custom') {
+    appBackgroundColor = customBackgroundColor;
+  }
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center overflow-hidden transition-colors duration-500 selection:bg-neutral-200 dark:selection:bg-neutral-800">
+    <div 
+      className="relative flex min-h-screen w-full flex-col overflow-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased transition-colors duration-500"
+      style={{ backgroundColor: appBackgroundColor }}
+    >
+      <Header 
+        isDarkMode={isDarkMode} 
+        toggleDarkMode={() => setBaseTheme(isDarkMode ? 'light' : 'dark')} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        customSurfaceColor={baseTheme === 'custom' ? customSurfaceColor : undefined}
+      />
       
-      {/* Neutral dynamic background */}
-      <div className="absolute inset-0 pointer-events-none -z-10">
-        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] ${getBlobColor()} rounded-full blur-[120px] animate-blob`}></div>
-        <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] ${isDarkMode ? 'bg-neutral-900/40' : 'bg-neutral-200/30'} rounded-full blur-[120px] animate-blob animation-delay-2000`}></div>
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)}
+        baseTheme={baseTheme}
+        setBaseTheme={setBaseTheme}
+        accentColor={accentColor}
+        setAccentColor={setAccentColor}
+        breakColor={breakColor}
+        setBreakColor={setBreakColor}
+        customBackgroundColor={customBackgroundColor}
+        setCustomBackgroundColor={setCustomBackgroundColor}
+        customSurfaceColor={customSurfaceColor}
+        setCustomSurfaceColor={setCustomSurfaceColor}
+        isSoundEnabled={isSoundEnabled}
+        setIsSoundEnabled={setIsSoundEnabled}
+        volume={volume}
+        setVolume={setVolume}
+      />
+
+      <div className="flex-grow flex flex-col overflow-y-auto">
+        {activeIdx !== null ? (
+          <TimerDisplay 
+              currentSegment={currentSegment!} 
+              onSegmentEnd={handleSegmentEnd} 
+              onReset={handleReset}
+              onSkip={handleSkip}
+              isLastSegment={isLastSegment}
+              schedule={schedule}
+              currentIndex={activeIdx}
+          />
+        ) : (
+          <div className="layout-container flex h-full grow flex-col items-center justify-center p-6 pb-20">
+            <div className="w-full max-w-[960px] flex flex-col gap-8">
+              <div className="flex flex-col gap-2 text-center md:text-left">
+                <h1 className="text-4xl md:text-5xl font-black leading-tight tracking-[-0.033em] text-slate-900 dark:text-white">
+                  Session Setup
+                </h1>
+                <p className="text-slate-500 dark:text-[#9eb7a8] text-lg font-normal">
+                  Customize your workflow for maximum productivity
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-8 flex flex-col gap-6">
+                  <div 
+                    className="bg-white dark:bg-surface-dark rounded-2xl p-6 md:p-8 shadow-sm border border-slate-100 dark:border-[#29382f]"
+                    style={baseTheme === 'custom' ? { backgroundColor: customSurfaceColor ? `${customSurfaceColor}20` : undefined, borderColor: customSurfaceColor ? `${customSurfaceColor}40` : undefined } : undefined}
+                  >
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-primary text-3xl">schedule</span>
+                        <h3 className="text-xl font-bold">End Time</h3>
+                      </div>
+                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-semibold">
+                        Duration: {totalHours}h {totalMinsRem}m
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4 justify-center items-center">
+                      {/* Hours */}
+                      <div className="flex flex-col items-center gap-3">
+                        <div 
+                          className="bg-slate-50 dark:bg-[#233329] w-24 h-32 rounded-xl flex items-center justify-center border border-slate-200 dark:border-transparent hover:border-primary/50 transition-colors cursor-pointer group shadow-sm relative overflow-hidden"
+                          style={customSurfaceStyle}
+                        >
+                          <input 
+                              type="number" 
+                              value={hours}
+                              onChange={(e) => setTimeSpecific('hour', parseInt(e.target.value) || 0)}
+                              className="w-full h-full text-center bg-transparent border-none focus:ring-0 text-5xl font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors appearance-none"
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hour</span>
+                      </div>
+                      
+                      <div className="flex items-center h-32 pb-8">
+                        <span className="text-5xl font-bold text-slate-300 dark:text-white/20">:</span>
+                      </div>
+                      
+                      {/* Minutes */}
+                      <div className="flex flex-col items-center gap-3">
+                        <div 
+                          className="bg-slate-50 dark:bg-[#233329] w-24 h-32 rounded-xl flex items-center justify-center border border-slate-200 dark:border-transparent ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark cursor-pointer shadow-sm relative overflow-hidden"
+                          style={customSurfaceStyle}
+                        >
+                          <input 
+                              type="number" 
+                              value={minutes}
+                              onChange={(e) => setTimeSpecific('minute', parseInt(e.target.value) || 0)}
+                              className="w-full h-full text-center bg-transparent border-none focus:ring-0 text-5xl font-bold text-primary appearance-none"
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-primary uppercase tracking-wider">Minute</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 flex flex-col gap-4">
+                      <div className="flex flex-wrap gap-3 justify-center">
+                        <button onClick={() => updateTime(-60)} style={customSurfaceStyle} className="flex-1 min-w-[100px] px-4 py-3.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-bold transition-colors whitespace-nowrap border border-red-100 dark:border-red-500/20">-1 hour</button>
+                        <button onClick={() => updateTime(-30)} style={customSurfaceStyle} className="flex-1 min-w-[100px] px-4 py-3.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-bold transition-colors whitespace-nowrap border border-red-100 dark:border-red-500/20">-30 min</button>
+                        <button onClick={() => updateTime(-15)} style={customSurfaceStyle} className="flex-1 min-w-[100px] px-4 py-3.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-bold transition-colors whitespace-nowrap border border-red-100 dark:border-red-500/20">-15 min</button>
+                      </div>
+                      <div className="flex flex-wrap gap-3 justify-center">
+                        <button onClick={() => updateTime(15)} style={customSurfaceStyle} className="flex-1 min-w-[100px] px-4 py-3.5 rounded-xl bg-primary/10 text-primary dark:text-primary hover:bg-primary/20 text-sm font-bold transition-colors whitespace-nowrap border border-primary/20 dark:border-primary/20">+15 min</button>
+                        <button onClick={() => updateTime(30)} style={customSurfaceStyle} className="flex-1 min-w-[100px] px-4 py-3.5 rounded-xl bg-primary/10 text-primary dark:text-primary hover:bg-primary/20 text-sm font-bold transition-colors whitespace-nowrap border border-primary/20 dark:border-primary/20">+30 min</button>
+                        <button onClick={() => updateTime(60)} style={customSurfaceStyle} className="flex-1 min-w-[100px] px-4 py-3.5 rounded-xl bg-primary/10 text-primary dark:text-primary hover:bg-primary/20 text-sm font-bold transition-colors whitespace-nowrap border border-primary/20 dark:border-primary/20">+1 hour</button>
+                      </div>
+                      <div className="flex justify-center mt-2">
+                        <button onClick={() => setEndTime(getDefaultTime())} style={customSurfaceStyle} className="px-10 py-3 rounded-xl bg-slate-100 dark:bg-[#233329] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2f4236] text-sm font-bold transition-colors border border-slate-200 dark:border-transparent">Reset to Default</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div 
+                      className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-[#29382f]"
+                      style={baseTheme === 'custom' ? { backgroundColor: customSurfaceColor ? `${customSurfaceColor}20` : undefined, borderColor: customSurfaceColor ? `${customSurfaceColor}40` : undefined } : undefined}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="material-symbols-outlined text-slate-400 dark:text-slate-500">free_breakfast</span>
+                        <h3 className="text-lg font-bold">Breaks</h3>
+                      </div>
+                      <div 
+                          className="flex items-center justify-between bg-slate-50 dark:bg-[#233329] rounded-xl p-2 border border-slate-200 dark:border-transparent"
+                          style={customSurfaceStyle}
+                      >
+                        <button 
+                          onClick={() => setBreakCount(Math.max(0, breakCount - 1))}
+                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white"
+                        >
+                          <span className="material-symbols-outlined">remove</span>
+                        </button>
+                        <span className="text-2xl font-bold">{breakCount}</span>
+                        <button 
+                          onClick={() => setBreakCount(breakCount + 1)}
+                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white"
+                        >
+                          <span className="material-symbols-outlined">add</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div 
+                      className={`bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-[#29382f] ${isPomodoro ? 'opacity-50 pointer-events-none grayscale' : ''}`}
+                      style={baseTheme === 'custom' ? { backgroundColor: customSurfaceColor ? `${customSurfaceColor}20` : undefined, borderColor: customSurfaceColor ? `${customSurfaceColor}40` : undefined } : undefined}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="material-symbols-outlined text-slate-400 dark:text-slate-500">hourglass_top</span>
+                        <h3 className="text-lg font-bold">Min / Break</h3>
+                      </div>
+                      <div 
+                          className="flex items-center justify-between bg-slate-50 dark:bg-[#233329] rounded-xl p-2 border border-slate-200 dark:border-transparent"
+                          style={customSurfaceStyle}
+                      >
+                        <button 
+                          disabled={isPomodoro}
+                          onClick={() => setBreakDuration(Math.max(1, breakDuration - 5))}
+                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white disabled:cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined">remove</span>
+                        </button>
+                        <span className="text-2xl font-bold">{breakDuration}<span className="text-sm font-normal text-slate-400 ml-1">m</span></span>
+                        <button 
+                          disabled={isPomodoro}
+                          onClick={() => setBreakDuration(breakDuration + 5)}
+                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white disabled:cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined">add</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div 
+                    className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-[#29382f] flex items-center justify-between cursor-pointer group hover:border-primary/50 transition-colors"
+                    onClick={() => setIsPomodoro(!isPomodoro)}
+                    style={baseTheme === 'custom' ? { backgroundColor: customSurfaceColor ? `${customSurfaceColor}20` : undefined, borderColor: customSurfaceColor ? `${customSurfaceColor}40` : undefined } : undefined}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <span className="material-symbols-outlined">timer_10_alt_1</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold group-hover:text-primary transition-colors">Pomodoro Mode</h3>
+                        <p className="text-sm text-slate-500 dark:text-[#9eb7a8]">Strict 25m focus / 5m break intervals</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
+                      <input type="checkbox" checked={isPomodoro} readOnly className="sr-only peer" />
+                      <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/20 rounded-full peer dark:bg-[#233329] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 flex flex-col gap-6">
+                  <div 
+                      className="bg-white dark:bg-[#1a2c23] rounded-2xl p-6 md:p-8 text-slate-900 dark:text-white relative overflow-hidden border border-slate-200 dark:border-[#29382f] flex flex-col h-full justify-between shadow-lg dark:shadow-none"
+                      style={baseTheme === 'custom' ? { backgroundColor: customSurfaceColor ? `${customSurfaceColor}20` : undefined, borderColor: customSurfaceColor ? `${customSurfaceColor}40` : undefined } : undefined}
+                  >
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <div>
+                      <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                        <span className="material-symbols-outlined">summarize</span> Summary
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/10">
+                          <span className="text-slate-500 dark:text-slate-400">Total Duration</span>
+                          <span className="font-bold">{totalHours}h {totalMinsRem}m</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/10">
+                          <span className="text-slate-500 dark:text-slate-400">Focus Time</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{focusH}h {focusM}m</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/10">
+                          <span className="text-slate-500 dark:text-slate-400">Total Breaks</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{totalBreakMinutes}m</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3">
+                          <span className="text-slate-500 dark:text-slate-400">Finish At</span>
+                          <span className="font-bold text-primary">{endTime}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-8">
+                      <button 
+                        onClick={handleGenerate}
+                        className="w-full bg-primary hover:bg-primary/90 text-[#111714] font-bold text-lg py-4 px-6 rounded-xl shadow-[0_0_20px_rgba(var(--color-primary)/0.3)] hover:shadow-[0_0_30px_rgba(var(--color-primary)/0.5)] transform hover:-translate-y-1 transition-all duration-200 flex items-center justify-center gap-3"
+                      >
+                        <span className="material-symbols-outlined">play_arrow</span>
+                        Start Session
+                      </button>
+                      <p className="text-center text-xs text-slate-500 mt-4">Pressing start will enable Do Not Disturb</p>
+                      
+                      {error && (
+                        <div className="mt-4 p-3 bg-red-500/20 text-red-200 rounded-lg text-xs font-bold border border-red-500/50 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm">error</span> {error}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <header className="max-w-5xl w-full px-8 py-10 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 flex items-center justify-center rounded-2xl shadow-xl transition-all duration-500 ${getThemeBg()}`}>
-             <i className="fa-solid fa-bolt-lightning text-white text-xl"></i>
-          </div>
-          <div>
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-neutral-50 tracking-tighter leading-none">0 Focus</h1>
-            <p className="text-[10px] uppercase font-black tracking-[0.3em] text-neutral-400 dark:text-neutral-500 mt-1">Time Master</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="glass w-12 h-12 rounded-2xl shadow-sm hover:scale-110 active:scale-95 transition-all flex items-center justify-center text-xl text-neutral-700 dark:text-neutral-300"
-          >
-            <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
-          </button>
-        </div>
-      </header>
-
-      <main className="w-full max-w-xl px-4 py-6 flex-grow flex items-center justify-center">
-        {!currentSegment ? (
-          <section className="glass w-full p-8 md:p-12 rounded-[3rem] shadow-2xl animate-in fade-in slide-in-from-bottom-12 duration-1000 relative">
-            
-            <div className="relative z-10">
-              <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-12">
-                <div>
-                  <h2 className="text-4xl font-black text-neutral-900 dark:text-neutral-50 mb-2 tracking-tight">Your Session.</h2>
-                  <p className="text-neutral-500 dark:text-neutral-400 font-medium">Set the rhythm of your productivity.</p>
-                </div>
-                
-                {/* Theme selector */}
-                <div className="flex gap-2 p-2 glass rounded-2xl self-end md:self-start">
-                   {(['indigo', 'blue', 'rose', 'amber', 'emerald'] as ThemeColor[]).map((c) => (
-                     <button
-                      key={c}
-                      onClick={() => setThemeColor(c)}
-                      title={`Tema ${c}`}
-                      className={`w-7 h-7 rounded-lg transition-all ${
-                        c === 'indigo' ? 'bg-indigo-500' :
-                        c === 'blue' ? 'bg-blue-500' :
-                        c === 'rose' ? 'bg-rose-500' :
-                        c === 'emerald' ? 'bg-emerald-500' : 'bg-amber-500'
-                      } ${themeColor === c ? 'scale-125 ring-2 ring-white dark:ring-neutral-400 shadow-md' : 'opacity-60 hover:opacity-100'}`}
-                     />
-                   ))}
-                </div>
-              </div>
-              
-              <div className="space-y-10">
-                <div className="group">
-                  <label className={`flex items-center gap-2 text-[11px] font-black mb-4 uppercase tracking-[0.2em] transition-colors ${
-                    themeColor === 'indigo' ? 'group-focus-within:text-indigo-500' :
-                    themeColor === 'blue' ? 'group-focus-within:text-blue-500' :
-                    themeColor === 'rose' ? 'group-focus-within:text-rose-500' :
-                    themeColor === 'emerald' ? 'group-focus-within:text-emerald-500' : 'group-focus-within:text-amber-500'
-                  } text-neutral-400 dark:text-neutral-500`}>
-                    <i className="fa-regular fa-clock"></i> End Time
-                  </label>
-                  <input 
-                    type="time" 
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full p-6 text-3xl font-black rounded-3xl bg-white/40 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 focus:border-neutral-400 dark:focus:border-neutral-600 focus:ring-8 focus:ring-neutral-500/5 outline-none transition-all dark:text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="group">
-                    <label className="flex items-center gap-2 text-[11px] font-black text-neutral-400 dark:text-neutral-500 mb-4 uppercase tracking-[0.2em] transition-colors">
-                      <i className="fa-solid fa-couch"></i> Breaks
-                    </label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      value={breakCount}
-                      onChange={(e) => setBreakCount(parseInt(e.target.value) || 0)}
-                      className="w-full p-6 text-3xl font-black rounded-3xl bg-white/40 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 focus:border-neutral-400 dark:focus:border-neutral-600 outline-none transition-all dark:text-white"
-                    />
-                  </div>
-                  <div className="group">
-                    <label className="flex items-center gap-2 text-[11px] font-black text-neutral-400 dark:text-neutral-500 mb-4 uppercase tracking-[0.2em] transition-colors">
-                      <i className="fa-solid fa-hourglass-half"></i> Min/Break
-                    </label>
-                    <input 
-                      type="number" 
-                      min="1"
-                      value={breakDuration}
-                      onChange={(e) => setBreakDuration(parseInt(e.target.value) || 0)}
-                      className="w-full p-6 text-3xl font-black rounded-3xl bg-white/40 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 focus:border-neutral-400 dark:focus:border-neutral-600 outline-none transition-all dark:text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-5 mt-14">
-                <button 
-                  onClick={handleGenerate}
-                  className={`group relative w-full py-6 rounded-3xl font-black transition-all shadow-2xl active:scale-95 text-xl overflow-hidden text-white ${getThemeBg()}`}
-                >
-                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
-                  <span className="relative flex items-center justify-center gap-3">
-                    <i className="fa-solid fa-play"></i> Start Session
-                  </span>
-                </button>
-                
-                <button 
-                  onClick={handlePomodoro}
-                  className="w-full glass text-neutral-800 dark:text-neutral-200 hover:bg-white/90 dark:hover:bg-neutral-800/90 font-black py-5 rounded-3xl transition-all active:scale-95 text-sm flex items-center justify-center gap-3 border border-neutral-200 dark:border-neutral-800 shadow-lg"
-                >
-                  <i className="fa-solid fa-clock-rotate-left text-neutral-500 text-lg"></i> Pomodoro Mode
-                </button>
-              </div>
-
-              {error && (
-                <div className="mt-8 p-5 bg-red-50/80 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-2xl text-xs font-black border border-red-100 dark:border-red-900/30 flex items-center gap-3 animate-shake">
-                  <i className="fa-solid fa-triangle-exclamation text-lg"></i> {error}
-                </div>
-              )}
-            </div>
-          </section>
-        ) : (
-          <TimerDisplay 
-            currentSegment={currentSegment} 
-            onSegmentEnd={handleSegmentEnd} 
-            onReset={handleReset}
-            onSkip={handleSkip}
-            isLastSegment={isLastSegment}
-            themeColor={themeColor}
-          />
-        )}
-      </main>
-
-      <footer className="w-full py-10 flex flex-col items-center gap-4 opacity-30">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full"></div>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-500 dark:text-neutral-400">Flow with purpose</p>
-          <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full"></div>
-        </div>
-
-        <div>
-          <a href="https://github.com/gek0v" target="_blank" rel="noopener noreferrer" className="text-[10px] font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200">
-            @gek0v · GitHub
-          </a>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
