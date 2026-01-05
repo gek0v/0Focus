@@ -360,24 +360,30 @@ const App: React.FC = () => {
                         <span className="material-symbols-outlined text-slate-400 dark:text-slate-500">free_breakfast</span>
                         <h3 className="text-lg font-bold">Breaks</h3>
                       </div>
-                      <div 
-                          className="flex items-center justify-between bg-slate-50 dark:bg-[#233329] rounded-xl p-2 border border-slate-200 dark:border-transparent"
-                          style={customSurfaceStyle}
-                      >
-                        <button 
-                          onClick={() => setBreakCount(Math.max(0, breakCount - 1))}
-                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white"
-                        >
-                          <span className="material-symbols-outlined">remove</span>
-                        </button>
-                        <span className="text-2xl font-bold">{breakCount}</span>
-                        <button 
-                          onClick={() => setBreakCount(breakCount + 1)}
-                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white"
-                        >
-                          <span className="material-symbols-outlined">add</span>
-                        </button>
-                      </div>
+                                          <div 
+                                              className="flex items-center justify-between bg-slate-50 dark:bg-[#233329] rounded-xl p-2 border border-slate-200 dark:border-transparent"
+                                              style={customSurfaceStyle}
+                                          >
+                                            <button 
+                                              onClick={() => setBreakCount(Math.max(0, breakCount - 1))}
+                                              className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white"
+                                            >
+                                              <span className="material-symbols-outlined">remove</span>
+                                            </button>
+                                            <input 
+                                              type="number"
+                                              value={breakCount}
+                                              onChange={(e) => setBreakCount(Math.max(0, parseInt(e.target.value) || 0))}
+                                              className="w-16 text-center bg-transparent border-none focus:ring-0 text-2xl font-bold text-slate-900 dark:text-white appearance-none"
+                                            />
+                                            <button 
+                                              onClick={() => setBreakCount(breakCount + 1)}
+                                              className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white"
+                                            >
+                                              <span className="material-symbols-outlined">add</span>
+                                            </button>
+                                          </div>
+                      
                     </div>
 
                     <div 
@@ -388,26 +394,36 @@ const App: React.FC = () => {
                         <span className="material-symbols-outlined text-slate-400 dark:text-slate-500">hourglass_top</span>
                         <h3 className="text-lg font-bold">Min / Break</h3>
                       </div>
-                      <div 
-                          className="flex items-center justify-between bg-slate-50 dark:bg-[#233329] rounded-xl p-2 border border-slate-200 dark:border-transparent"
-                          style={customSurfaceStyle}
-                      >
-                        <button 
-                          disabled={isPomodoro}
-                          onClick={() => setBreakDuration(Math.max(1, breakDuration - 5))}
-                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white disabled:cursor-not-allowed"
-                        >
-                          <span className="material-symbols-outlined">remove</span>
-                        </button>
-                        <span className="text-2xl font-bold">{breakDuration}<span className="text-sm font-normal text-slate-400 ml-1">m</span></span>
-                        <button 
-                          disabled={isPomodoro}
-                          onClick={() => setBreakDuration(breakDuration + 5)}
-                          className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white disabled:cursor-not-allowed"
-                        >
-                          <span className="material-symbols-outlined">add</span>
-                        </button>
-                      </div>
+                                          <div 
+                                              className="flex items-center justify-between bg-slate-50 dark:bg-[#233329] rounded-xl p-2 border border-slate-200 dark:border-transparent"
+                                              style={customSurfaceStyle}
+                                          >
+                                            <button 
+                                              disabled={isPomodoro}
+                                              onClick={() => setBreakDuration(Math.max(1, breakDuration - 1))}
+                                              className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white disabled:cursor-not-allowed"
+                                            >
+                                              <span className="material-symbols-outlined">remove</span>
+                                            </button>
+                                            <div className="flex items-baseline justify-center">
+                                              <input 
+                                                type="number"
+                                                disabled={isPomodoro}
+                                                value={breakDuration}
+                                                onChange={(e) => setBreakDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                                                className="w-12 text-center bg-transparent border-none focus:ring-0 text-2xl font-bold text-slate-900 dark:text-white appearance-none disabled:cursor-not-allowed"
+                                              />
+                                              <span className="text-sm font-normal text-slate-400 ml-0.5">m</span>
+                                            </div>
+                                            <button 
+                                              disabled={isPomodoro}
+                                              onClick={() => setBreakDuration(breakDuration + 1)}
+                                              className="size-10 rounded-lg bg-white dark:bg-surface-dark shadow-sm flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors text-slate-600 dark:text-white disabled:cursor-not-allowed"
+                                            >
+                                              <span className="material-symbols-outlined">add</span>
+                                            </button>
+                                          </div>
+                      
                     </div>
                   </div>
 
