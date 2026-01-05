@@ -1,0 +1,5 @@
+{
+  "name": "FocusFlow - Task & Break Scheduler",
+  "description": "A productivity tool that automatically distributes your work sessions and breaks to fit perfectly within your available time until a set deadline.",
+  "requestFramePermissions": []
+}
