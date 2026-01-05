@@ -290,6 +290,12 @@ const App: React.FC = () => {
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-500 dark:text-neutral-400">Flow with purpose</p>
           <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full"></div>
         </div>
+
+        <div>
+          <a href="https://github.com/gek0v" target="_blank" rel="noopener noreferrer" className="text-[10px] font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200">
+            @gek0v · GitHub
+          </a>
+        </div>
       </footer>
     </div>
   );
