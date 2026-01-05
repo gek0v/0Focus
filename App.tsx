@@ -261,7 +261,7 @@ const App: React.FC = () => {
                   onClick={handlePomodoro}
                   className="w-full glass text-neutral-800 dark:text-neutral-200 hover:bg-white/90 dark:hover:bg-neutral-800/90 font-black py-5 rounded-3xl transition-all active:scale-95 text-sm flex items-center justify-center gap-3 border border-neutral-200 dark:border-neutral-800 shadow-lg"
                 >
-                  <i className="fa-solid fa-clock-rotate-left text-neutral-500 text-lg"></i> Modo Pomodoro Automático
+                  <i className="fa-solid fa-clock-rotate-left text-neutral-500 text-lg"></i> Modo Pomodoro
                 </button>
               </div>
 
