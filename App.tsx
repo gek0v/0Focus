@@ -36,7 +36,7 @@ const App: React.FC = () => {
       setActiveIdx(0);
     } catch (err: any) {
       setError(err.message.includes("No space") 
-        ? "¡Tiempo insuficiente! Ajusta las pausas o la hora final." 
+        ? "Insufficient time! Adjust breaks or the end time." 
         : err.message);
     }
   };
@@ -53,7 +53,7 @@ const App: React.FC = () => {
       const totalMins = Math.floor((target.getTime() - now.getTime()) / 60000);
       const numBreaks = Math.floor(totalMins / 30);
       
-      if (numBreaks < 1) throw new Error("Tiempo insuficiente para Pomodoro.");
+      if (numBreaks < 1) throw new Error("Insufficient time for Pomodoro.");
 
       setBreakDuration(5);
       setBreakCount(numBreaks - 1);
@@ -121,7 +121,7 @@ const App: React.FC = () => {
   const isLastSegment = activeIdx !== null && activeIdx === schedule.length - 1;
 
   const getBlobColor = () => {
-    if (isDarkMode) return 'bg-neutral-800/20'; // Modo oscuro neutro
+    if (isDarkMode) return 'bg-neutral-800/20'; // Neutral dark mode
     switch(themeColor) {
       case 'rose': return 'bg-rose-200/30';
       case 'amber': return 'bg-amber-200/30';
@@ -144,7 +144,7 @@ const App: React.FC = () => {
   return (
     <div className="relative min-h-screen flex flex-col items-center overflow-hidden transition-colors duration-500 selection:bg-neutral-200 dark:selection:bg-neutral-800">
       
-      {/* Fondo dinámico neutral */}
+      {/* Neutral dynamic background */}
       <div className="absolute inset-0 pointer-events-none -z-10">
         <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] ${getBlobColor()} rounded-full blur-[120px] animate-blob`}></div>
         <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] ${isDarkMode ? 'bg-neutral-900/40' : 'bg-neutral-200/30'} rounded-full blur-[120px] animate-blob animation-delay-2000`}></div>
@@ -157,7 +157,7 @@ const App: React.FC = () => {
           </div>
           <div>
             <h1 className="text-3xl font-black text-neutral-900 dark:text-neutral-50 tracking-tighter leading-none">FocusFlow</h1>
-            <p className="text-[10px] uppercase font-black tracking-[0.3em] text-neutral-400 dark:text-neutral-500 mt-1">Tempo Master</p>
+            <p className="text-[10px] uppercase font-black tracking-[0.3em] text-neutral-400 dark:text-neutral-500 mt-1">Time Master</p>
           </div>
         </div>
         
@@ -178,11 +178,11 @@ const App: React.FC = () => {
             <div className="relative z-10">
               <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-12">
                 <div>
-                  <h2 className="text-4xl font-black text-neutral-900 dark:text-neutral-50 mb-2 tracking-tight">Tu Sesión.</h2>
-                  <p className="text-neutral-500 dark:text-neutral-400 font-medium">Define el ritmo de tu productividad.</p>
+                  <h2 className="text-4xl font-black text-neutral-900 dark:text-neutral-50 mb-2 tracking-tight">Your Session.</h2>
+                  <p className="text-neutral-500 dark:text-neutral-400 font-medium">Set the rhythm of your productivity.</p>
                 </div>
                 
-                {/* Selector de Tema */}
+                {/* Theme selector */}
                 <div className="flex gap-2 p-2 glass rounded-2xl self-end md:self-start">
                    {(['indigo', 'blue', 'rose', 'amber', 'emerald'] as ThemeColor[]).map((c) => (
                      <button
@@ -208,7 +208,7 @@ const App: React.FC = () => {
                     themeColor === 'rose' ? 'group-focus-within:text-rose-500' :
                     themeColor === 'emerald' ? 'group-focus-within:text-emerald-500' : 'group-focus-within:text-amber-500'
                   } text-neutral-400 dark:text-neutral-500`}>
-                    <i className="fa-regular fa-clock"></i> Hora de Finalización
+                    <i className="fa-regular fa-clock"></i> End Time
                   </label>
                   <input 
                     type="time" 
@@ -221,7 +221,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-2 gap-8">
                   <div className="group">
                     <label className="flex items-center gap-2 text-[11px] font-black text-neutral-400 dark:text-neutral-500 mb-4 uppercase tracking-[0.2em] transition-colors">
-                      <i className="fa-solid fa-couch"></i> Pausas
+                      <i className="fa-solid fa-couch"></i> Breaks
                     </label>
                     <input 
                       type="number" 
@@ -233,7 +233,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="group">
                     <label className="flex items-center gap-2 text-[11px] font-black text-neutral-400 dark:text-neutral-500 mb-4 uppercase tracking-[0.2em] transition-colors">
-                      <i className="fa-solid fa-hourglass-half"></i> Min/Pausa
+                      <i className="fa-solid fa-hourglass-half"></i> Min/Break
                     </label>
                     <input 
                       type="number" 
@@ -253,7 +253,7 @@ const App: React.FC = () => {
                 >
                   <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
                   <span className="relative flex items-center justify-center gap-3">
-                    <i className="fa-solid fa-play"></i> Iniciar Sesión
+                    <i className="fa-solid fa-play"></i> Start Session
                   </span>
                 </button>
                 
@@ -261,7 +261,7 @@ const App: React.FC = () => {
                   onClick={handlePomodoro}
                   className="w-full glass text-neutral-800 dark:text-neutral-200 hover:bg-white/90 dark:hover:bg-neutral-800/90 font-black py-5 rounded-3xl transition-all active:scale-95 text-sm flex items-center justify-center gap-3 border border-neutral-200 dark:border-neutral-800 shadow-lg"
                 >
-                  <i className="fa-solid fa-clock-rotate-left text-neutral-500 text-lg"></i> Modo Pomodoro
+                  <i className="fa-solid fa-clock-rotate-left text-neutral-500 text-lg"></i> Pomodoro Mode
                 </button>
               </div>
 
