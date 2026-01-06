@@ -5,6 +5,7 @@ import TimerDisplay from './components/TimerDisplay';
 import Header from './components/Header';
 import SettingsModal from './components/SettingsModal';
 import Footer from './components/Footer';
+import GoogleAnalytics from './components/GoogleAnalytics';
 
 const App: React.FC = () => {
   // Get current time rounded to next 5 minutes for default start
@@ -231,6 +232,7 @@ const App: React.FC = () => {
       className="relative flex min-h-screen w-full flex-col overflow-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased transition-colors duration-500"
       style={{ backgroundColor: appBackgroundColor }}
     >
+      <GoogleAnalytics />
       <Header 
         isDarkMode={isDarkMode} 
         toggleDarkMode={() => setBaseTheme(isDarkMode ? 'light' : 'dark')} 
