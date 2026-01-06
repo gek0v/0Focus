@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 
 const GoogleAnalytics = () => {
-  const gaId = import.meta.env.VITE_GA_ID;
+  // Usamos la variable de entorno si existe, si no, el ID que nos has proporcionado
+  const gaId = import.meta.env.VITE_GA_ID || 'G-0V10RWXL4R';
 
   useEffect(() => {
     if (!gaId) return;
 
-    // Evitar duplicados si ya existe
+    // Evitar duplicados
     if (document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${gaId}"]`)) return;
 
     // Script 1: Global Site Tag
@@ -15,7 +16,7 @@ const GoogleAnalytics = () => {
     script1.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
     document.head.appendChild(script1);
 
-    // Script 2: Configuración
+    // Script 2: Configuración (gtag.js)
     const script2 = document.createElement('script');
     script2.innerHTML = `
       window.dataLayer = window.dataLayer || [];
@@ -25,10 +26,10 @@ const GoogleAnalytics = () => {
     `;
     document.head.appendChild(script2);
 
-    console.log(`📊 Google Analytics initialized: ${gaId}`);
+    console.log(`📊 Google Analytics (Google Tag) initialized: ${gaId}`);
   }, [gaId]);
 
-  return null; // Este componente no renderiza nada visual
+  return null;
 };
 
 export default GoogleAnalytics;
