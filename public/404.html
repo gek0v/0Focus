@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | 0 Focus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#38e07b',
+                        background: '#122017',
+                        surface: '#1a2c23',
+                    },
+                    fontFamily: {
+                        display: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-white font-display flex flex-col items-center justify-center min-h-screen p-6 text-center">
+    
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative z-10 flex flex-col items-center">
+        <h1 class="text-9xl font-black text-primary tracking-tighter opacity-20 select-none">404</h1>
+        
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4 w-full">
+            <h2 class="text-3xl font-bold">Lost your focus?</h2>
+            <p class="text-slate-400 max-w-md">The page you are looking for doesn't exist. Let's get you back to productivity.</p>
+            
+            <a href="/" class="mt-4 px-8 py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2">
+                <span>Back to Timer</span>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>
